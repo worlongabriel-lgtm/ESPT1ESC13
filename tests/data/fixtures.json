@@ -1,0 +1,37 @@
+{
+  "valid": {
+    "customers": [
+      { "name": "João da Silva", "email": "joao@example.com", "document": "12345678901" },
+      { "name": "Ana María Núñez", "email": "ana+nunez@example.org", "document": "98765432100" },
+      { "name": "Ltda. Comércio & Cia", "email": "contato@ltda.com.br", "document": "11122233344" }
+    ],
+    "products": [
+      { "sku": "PROD-001", "name": "Caneta Azul", "price": 1.50, "stock": 100 },
+      { "sku": "PROD-002", "name": "Notebook X", "price": 4599.99, "stock": 5 },
+      { "sku": "PROD-003", "name": "Café 500g", "price": 0.99, "stock": 1 },
+      { "sku": "ABCD", "name": "Item 4-char SKU", "price": 12.34, "stock": 0 },
+      { "sku": "PROD-2024-ABCD-EFGH", "name": "SKU comprido", "price": 999.99, "stock": 50 }
+    ],
+    "orders": [
+      { "customerId": "c1", "items": [{ "productId": "p1", "quantity": 2 }] },
+      { "customerId": "c2", "items": [{ "productId": "p2", "quantity": 1 }, { "productId": "p3", "quantity": 3 }] }
+    ]
+  },
+  "invalid": [
+    { "endpoint": "POST /customers", "payload": { "name": "Jo", "email": "a@b.co", "document": "12345678901" }, "regra_violada": "name minLength=3", "status_esperado": 400 },
+    { "endpoint": "POST /customers", "payload": { "name": "Ok Name", "email": "not-an-email", "document": "12345678901" }, "regra_violada": "format=email", "status_esperado": 400 },
+    { "endpoint": "POST /customers", "payload": { "name": "Ok Name", "email": "a@b.co", "document": "123" }, "regra_violada": "document pattern CPF", "status_esperado": 400 },
+    { "endpoint": "POST /products", "payload": { "sku": "abc", "name": "X", "price": 10, "stock": 1 }, "regra_violada": "sku pattern + name minLength", "status_esperado": 400 },
+    { "endpoint": "POST /products", "payload": { "sku": "PROD-001", "name": "Dup", "price": 10, "stock": 1 }, "regra_violada": "SKU duplicado (depende de estado)", "status_esperado": 409 },
+    { "endpoint": "POST /orders", "payload": { "customerId": "uuid", "items": [] }, "regra_violada": "items minItems=1", "status_esperado": 400 },
+    { "endpoint": "POST /payments", "payload": { "orderId": "uuid", "method": "BITCOIN", "amount": 10 }, "regra_violada": "enum method", "status_esperado": 400 },
+    { "endpoint": "POST /payments", "payload": { "orderId": "uuid", "method": "PIX", "amount": -1 }, "regra_violada": "amount minimum=0.01", "status_esperado": 400 }
+  ],
+  "boundary": [
+    { "endpoint": "POST /customers", "payload": { "name": "abc", "email": "a@b.co", "document": "00000000000" }, "nota": "name exatamente 3 chars", "status_esperado": 201 },
+    { "endpoint": "POST /products", "payload": { "sku": "ABCD", "name": "abc", "price": 0.01, "stock": 0 }, "nota": "mínimos absolutos", "status_esperado": 201 },
+    { "endpoint": "POST /products", "payload": { "sku": "ABCDEFGHIJKLMNOPQRST", "name": "20 chars sku", "price": 9999.99, "stock": 999999 }, "nota": "sku tamanho máximo", "status_esperado": 201 },
+    { "endpoint": "POST /orders", "payload": { "customerId": "c1", "items": [{ "productId": "p1", "quantity": 1 }] }, "nota": "1 item, qty 1", "status_esperado": 201 },
+    { "endpoint": "POST /payments", "payload": { "orderId": "o1", "method": "PIX", "amount": 0.01 }, "nota": "amount mínimo", "status_esperado": 201 }
+  ]
+}

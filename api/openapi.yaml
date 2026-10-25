@@ -1,0 +1,146 @@
+# api/openapi.yaml
+openapi: 3.0.3
+info:
+  title: LojaX Order API
+  version: 1.0.0
+  description: API fictícia usada para estudo de testes de integração
+servers:
+  - url: https://api.lojax.local/v1
+paths:
+  /customers:
+    post:
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, document]
+              properties:
+                name:     { type: string, minLength: 3, maxLength: 120 }
+                email:    { type: string, format: email }
+                document: { type: string, pattern: '^\d{11}$' }  # CPF
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '400': { description: Payload inválido }
+        '409': { description: Documento já cadastrado }
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '404': { description: Não encontrado }
+  /products:
+    post:
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name, price, stock]
+              properties:
+                sku:   { type: string, pattern: '^[A-Z0-9-]{4,20}$' }
+                name:  { type: string, minLength: 3 }
+                price: { type: number, minimum: 0.01 }
+                stock: { type: integer, minimum: 0 }
+      responses:
+        '201': { description: Criado }
+        '400': { description: Payload inválido }
+        '409': { description: SKU duplicado }
+  /products/{id}/stock:
+    patch:
+      operationId: adjustStock
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delta]
+              properties:
+                delta: { type: integer }   # negativo debita, positivo credita
+      responses:
+        '200': { description: Estoque atualizado }
+        '404': { description: Produto não encontrado }
+        '409': { description: Estoque insuficiente }
+  /orders:
+    post:
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customerId, items]
+              properties:
+                customerId: { type: string, format: uuid }
+                items:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [productId, quantity]
+                    properties:
+                      productId: { type: string, format: uuid }
+                      quantity:  { type: integer, minimum: 1 }
+      responses:
+        '201': { description: Pedido criado, content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } }
+        '400': { description: Payload inválido }
+        '404': { description: Cliente ou produto não encontrado }
+        '409': { description: Estoque insuficiente }
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { content: { application/json: { schema: { $ref: '#/components/schemas/Order' } } } }
+        '404': { description: Não encontrado }
+  /payments:
+    post:
+      operationId: createPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, method, amount]
+              properties:
+                orderId: { type: string, format: uuid }
+                method:  { type: string, enum: [CREDIT_CARD, PIX, BOLETO] }
+                amount:  { type: number, minimum: 0.01 }
+      responses:
+        '201': { description: Pagamento processado }
+        '402': { description: Pagamento recusado }
+        '404': { description: Pedido não encontrado }
+        '409': { description: Pedido já pago }
+components:
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        document: { type: string }
+    Order:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        status: { type: string, enum: [CREATED, PAID, CANCELLED] }
+        total: { type: number }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId: { type: string, format: uuid }
+              quantity: { type: integer }
+              unitPrice: { type: number }

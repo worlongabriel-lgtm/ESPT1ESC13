@@ -1,0 +1,29 @@
+consumer: OrderService
+provider: ProductService
+interactions:
+  - description: "Debita estoque ao criar pedido"
+    providerStates:
+      - name: "produto p1 existe com estoque 5"
+    request:
+      method: PATCH
+      path: /v1/products/p1/stock
+      body: { delta: -2 }
+    response:
+      status: 200
+      body:
+        id: "p1"
+        stock: 3
+  - description: "Retorna 409 quando estoque é insuficiente"
+    providerStates:
+      - name: "produto p1 existe com estoque 1"
+    request:
+      method: PATCH
+      path: /v1/products/p1/stock
+      body: { delta: -3 }
+    response:
+      status: 409
+
+# Contratos NÃO assumidos (anti-patterns):
+# - OrderService NÃO deve assumir que a resposta contém `name` ou `price`
+# - OrderService NÃO deve assumir ordem de campos no JSON
+# - OrderService NÃO deve depender do texto exato de `error.message`
